@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw a Perfect Circle Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black; /* Set background color to black */
+            color: white; /* Set text and drawing color to white */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #canvas {
+            background-color: transparent;
+            cursor: crosshair;
+        }
+        #accuracy-container {
+            text-align: center;
+            font-family: "Courier New", monospace;
+            margin-top: 20px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            user-select: none; /* Prevent text selection */
+        }
+        #accuracy {
+            font-size: 72px; /* 2x bigger font size */
+            pointer-events: none; /* Allow drawing through accuracy text */
+        }
+        #best-score {
+            font-size: 36px; /* 2x bigger font size */
+            pointer-events: none; /* Allow drawing through best score text */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="accuracy-container">
+        <div id="accuracy">0.0%</div>
+        <div id="best-score">Best Score: 0.0%</div>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const bestScoreDisplay = document.getElementById('best-score');
+        let drawing = false;
+        let points = [];
+        let accuracy = 0;
+        let bestScore = 0;
+        let circleRadius = 50; // Initial radius of the invisible circle
+        let fixedCircleSize = false; // Flag to control circle size change
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        ctx.lineWidth = 5; // Set the line width to 5 pixels
+        ctx.strokeStyle = 'white'; // Set the drawing color to white
+
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            points = [];
+            const offsetX = canvas.getBoundingClientRect().left;
+            const offsetY = canvas.getBoundingClientRect().top;
+            points.push({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            const offsetX = canvas.getBoundingClientRect().left;
+            const offsetY = canvas.getBoundingClientRect().top;
+            points.push({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+            calculateAccuracy();
+            ctx.beginPath(); // Reset the path
+            fixedCircleSize = true; // Prevent circle size change until a new round
+            updateBestScore();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (drawing) {
+                // If the mouse leaves while drawing, end the round and prevent circle size change
+                drawing = false;
+                calculateAccuracy();
+                ctx.beginPath();
+                fixedCircleSize = true;
+                updateBestScore();
+            }
+        });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+
+            for (let i = 1; i < points.length; i++) {
+                const currentPoint = points[i];
+                const previousPoint = points[i - 1];
+                const segment = [previousPoint, currentPoint];
+                ctx.strokeStyle = 'white'; // Set the drawing color to white
+                ctx.lineTo(currentPoint.x, currentPoint.y);
+                ctx.stroke();
+            }
+
+            // Draw the invisible circle representing target accuracy
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            ctx.strokeStyle = 'transparent';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, circleRadius, 0, Math.PI, false);
+            ctx.stroke();
+        }
+
+        function calculateAccuracy() {
+            if (points.length < 2) {
+                accuracyDisplay.textContent = "0.0%";
+                return;
+            }
+
+            const start = points[0];
+            const end = points[points.length - 1];
+            const distance = Math.sqrt(
+                (end.x - start.x) ** 2 + (end.y - start.y) ** 2
+            );
+
+            if (distance < 10) {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const drawnRadius = Math.sqrt(
+                    (start.x - centerX) ** 2 + (start.y - centerY) ** 2
+                );
+                const circumscribedRadius = Math.sqrt(
+                    (canvas.width / 2) ** 2 + (canvas.height / 2) ** 2
+                );
+                accuracy = Math.abs(
+                    (1 - Math.abs(drawnRadius / circumscribedRadius)) * 100
+                ).toFixed(1); // Format accuracy with one decimal place
+                accuracyDisplay.textContent = `${accuracy}%`;
+
+                // Change the circle size based on accuracy
+                if (!fixedCircleSize) {
+                    circleRadius = 50 + (accuracy / 100) * 50;
+                }
+            } else {
+                accuracyDisplay.textContent = "XX.X";
+            }
+        }
+
+        function updateBestScore() {
+            if (accuracy > bestScore) {
+                bestScore = accuracy;
+                bestScoreDisplay.textContent = `Best Score: ${bestScore}%`;
+            }
+        }
+    </script>
+</body>
+</html>
